@@ -134,7 +134,10 @@ void app_update()
         // Render gui
         gs_gui_begin(gui, NULL);
 
-        gs_ddt(&ddt, gui, NULL);
+
+        gs_vec2 fb = gui->framebuffer_size;
+        gs_gui_rect_t screen = gs_gui_rect(0, 0, fb.x, fb.y);
+        gs_ddt(&ddt, gui, screen, NULL);
 
         gs_gui_end(gui);
         gs_gui_render(gui, cb);
