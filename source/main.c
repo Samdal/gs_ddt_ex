@@ -22,34 +22,12 @@ typedef struct app_t
 #define GS_DDT_IMPL
 #include "gs_ddt/gs_ddt.h"
 
-static void
-echo(int argc, char** argv)
-{
-        for (int i = 1; i < argc; i++)
-                gs_ddt_printf("%s ", argv[i]);
-        gs_ddt_printf("\n");
-}
-
-static void
-spam(int argc, char** argv)
-{
-        if (argc != 3) goto spam_invalid_command;
-        int count  = atoi(argv[2]);
-        if (!count) goto spam_invalid_command;
-        while (count--) gs_ddt_printf("%s\n", argv[1]);
-        return;
-spam_invalid_command:
-        gs_ddt_printf("[spam]: invalid usage. It should be 'spam word [int count]''\n");
-}
-
-static void help(int argc, char** argv);
-
 static int bg;
-static void toggle_bg(int argc, char** argv)
-{
-        gs_ddt_printf("Background turned %s\n", (bg = !bg) ? "on" : "off");
-}
 
+static void toggle_bg(int argc, char** argv);
+static void help(int argc, char** argv);
+static void echo(int argc, char** argv);
+static void spam(int argc, char** argv);
 
 gs_ddt_command_t commands[] = {
         {
@@ -74,12 +52,49 @@ gs_ddt_command_t commands[] = {
         },
 };
 
-static void
+gs_ddt_t ddt = {
+        .tb = "",
+        .cb = "",
+        .commands = commands,
+        .commands_len = gs_array_size(commands),
+        .size = 0.4,
+        .open_speed = 0.2,
+        .close_speed = 0.3,
+        .autoscroll = 1,
+};
+
+void
+toggle_bg(int argc, char** argv)
+{
+        gs_ddt_printf(&ddt, "Background turned %s\n", (bg = !bg) ? "on" : "off");
+}
+
+void
+spam(int argc, char** argv)
+{
+        if (argc != 3) goto spam_invalid_command;
+        int count  = atoi(argv[2]);
+        if (!count) goto spam_invalid_command;
+        while (count--) gs_ddt_printf(&ddt, "%s\n", argv[1]);
+        return;
+spam_invalid_command:
+        gs_ddt_printf(&ddt, "[spam]: invalid usage. It should be 'spam word [int count]''\n");
+}
+
+void
+echo(int argc, char** argv)
+{
+        for (int i = 1; i < argc; i++)
+                gs_ddt_printf(&ddt, "%s ", argv[i]);
+        gs_ddt_printf(&ddt, "\n");
+}
+
+void
 help(int argc, char** argv)
 {
         for (int i = 0; i < gs_array_size(commands); i++) {
-                if (commands[i].name) gs_ddt_printf("* Command: %s\n", commands[i].name);
-                if (commands[i].desc) gs_ddt_printf("- desc: %s\n", commands[i].desc);
+                if (commands[i].name) gs_ddt_printf(&ddt, "* Command: %s\n", commands[i].name);
+                if (commands[i].desc) gs_ddt_printf(&ddt, "- desc: %s\n", commands[i].desc);
         }
 }
 
@@ -101,11 +116,10 @@ void app_update()
         gs_vec2 fbs = gs_platform_framebuffer_sizev(gs_platform_main_window());
         const float t = gs_platform_elapsed_time() * 0.0001f;
 
-        static int open, autoscroll = 1;
         if (gs_platform_key_pressed(GS_KEYCODE_ESC)) {
-                open = !open;
-        } else if (gs_platform_key_pressed(GS_KEYCODE_TAB) && open) {
-                autoscroll = !autoscroll;
+                ddt.open = !ddt.open;
+        } else if (gs_platform_key_pressed(GS_KEYCODE_TAB) && ddt.open) {
+                ddt.autoscroll = !ddt.autoscroll;
         }
 
         if (bg) {
@@ -114,13 +128,13 @@ void app_update()
                 gsi_sphere(gsi, 0.f, 0.f, 0.f, 1.f, 50, 150, 200, 50, GS_GRAPHICS_PRIMITIVE_LINES);
         }
         gsi_camera2D(gsi, fbs.x, fbs.y);
-        gsi_text(gsi, fbs.x * 0.5f - 198.f, fbs.y * 0.5f, "ESC to open term, TAB toggle autoscroll, help for more", NULL, false, 255, 255, 255, 255);
+        gsi_text(gsi, fbs.x * 0.5f - 198.f, fbs.y * 0.5f, "ESC to ddt.open term, TAB toggle autoscroll, help for more", NULL, false, 255, 255, 255, 255);
         gsi_renderpass_submit(gsi, cb, fbs.x, fbs.y, gs_color(10, 10, 10, 255));
 
         // Render gui
         gs_gui_begin(gui, NULL);
 
-        gs_ddt_update(gui, NULL, open, autoscroll, 0.4f, 0.2f, 0.3f, commands, gs_array_size(commands));
+        gs_ddt(&ddt, gui, NULL);
 
         gs_gui_end(gui);
         gs_gui_render(gui, cb);
