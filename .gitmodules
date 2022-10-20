@@ -1,3 +1,6 @@
 [submodule "third_party/include/gs"]
 	path = third_party/include/gs
 	url = https://github.com/MrFrenik/gunslinger
+[submodule "source/gs_ddt"]
+	path = source/gs_ddt
+	url = https://github.com/Samdal/gs_ddt
