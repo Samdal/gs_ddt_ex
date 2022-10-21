@@ -22,9 +22,10 @@ typedef struct app_t
 #define GS_DDT_IMPL
 #include "gs_ddt/gs_ddt.h"
 
-static int bg;
+static int bg, window = 1;
 
 static void toggle_bg(int argc, char** argv);
+static void toggle_window(int argc, char** argv);
 static void help(int argc, char** argv);
 static void echo(int argc, char** argv);
 static void spam(int argc, char** argv);
@@ -50,6 +51,11 @@ gs_ddt_command_t commands[] = {
                 .name = "bg",
                 .desc = "toggles background",
         },
+        {
+                .func = toggle_window,
+                .name = "window",
+                .desc = "toggles gui window",
+        },
 };
 
 gs_ddt_t ddt = {
@@ -67,6 +73,12 @@ void
 toggle_bg(int argc, char** argv)
 {
         gs_ddt_printf(&ddt, "Background turned %s\n", (bg = !bg) ? "on" : "off");
+}
+
+void
+toggle_window(int argc, char** argv)
+{
+        gs_ddt_printf(&ddt, "GUI Window turned %s\n", (window = !window) ? "on" : "off");
 }
 
 void
@@ -134,6 +146,11 @@ void app_update()
         // Render gui
         gs_gui_begin(gui, NULL);
 
+        if (window && gs_gui_window_begin(gui, "App", gs_gui_rect(100, 100, 200, 200))) {
+                gs_gui_layout_row(gui, 1, (int[]){-1}, 0);
+                gs_gui_text(gui, "Hello, Gunslinger.");
+                gs_gui_window_end(gui);
+        }
 
         gs_vec2 fb = gui->framebuffer_size;
         gs_gui_rect_t screen = gs_gui_rect(0, 0, fb.x, fb.y);
