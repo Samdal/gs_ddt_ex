@@ -22,13 +22,16 @@ typedef struct app_t
 #define GS_DDT_IMPL
 #include "gs_ddt/gs_ddt.h"
 
-static int bg, window = 1;
+static int bg, window = 1, embeded, summons;
 
 static void toggle_bg(int argc, char** argv);
 static void toggle_window(int argc, char** argv);
+static void toggle_embedded(int argc, char** argv);
 static void help(int argc, char** argv);
 static void echo(int argc, char** argv);
 static void spam(int argc, char** argv);
+void summon(int argc, char** argv);
+void sz(int argc, char** argv);
 
 gs_ddt_command_t commands[] = {
         {
@@ -56,6 +59,21 @@ gs_ddt_command_t commands[] = {
                 .name = "window",
                 .desc = "toggles gui window",
         },
+        {
+                .func = toggle_embedded,
+                .name = "embed",
+                .desc = "places the ddt inside the window",
+        },
+        {
+                .func = summon,
+                .name = "summon",
+                .desc = "summons a gui window",
+        },
+        {
+                .func = sz,
+                .name = "sz",
+                .desc = "change ddt size",
+        },
 };
 
 gs_ddt_t ddt = {
@@ -76,9 +94,45 @@ toggle_bg(int argc, char** argv)
 }
 
 void
+sz(int argc, char** argv)
+{
+        if (argc != 2) {
+                gs_ddt_printf(&ddt, "[sz]: needs 1 argument!\n");
+                return;
+        }
+        float sz = atof(argv[1]);
+        if (sz > 1 || sz < 0) {
+                gs_ddt_printf(&ddt, "[sz]: number needs to be between (0, 1)");
+                return;
+        }
+        ddt.size = sz;
+
+        gs_ddt_printf(&ddt, "ddt size is now %f\n", sz);
+}
+
+void
 toggle_window(int argc, char** argv)
 {
-        gs_ddt_printf(&ddt, "GUI Window turned %s\n", (window = !window) ? "on" : "off");
+        if (window && embeded)
+                gs_ddt_printf(&ddt, "Unable to turn off window, ddt is embeded!\n");
+        else
+                gs_ddt_printf(&ddt, "GUI Window turned %s\n", (window = !window) ? "on" : "off");
+}
+
+void
+toggle_embedded(int argc, char** argv)
+{
+        if (!window && !embeded)
+                gs_ddt_printf(&ddt, "Unable to embed into window, open window first!\n");
+        else
+                gs_ddt_printf(&ddt, "ddt embedded turned %s\n", (embeded = !embeded) ? "on" : "off");
+}
+
+void
+summon(int argc, char** argv)
+{
+        gs_ddt_printf(&ddt, "A summoner has cast his spell! A window has appeared!!!!\n");
+        summons++;
 }
 
 void
@@ -140,20 +194,37 @@ void app_update()
                 gsi_sphere(gsi, 0.f, 0.f, 0.f, 1.f, 50, 150, 200, 50, GS_GRAPHICS_PRIMITIVE_LINES);
         }
         gsi_camera2D(gsi, fbs.x, fbs.y);
-        gsi_text(gsi, fbs.x * 0.5f - 198.f, fbs.y * 0.5f, "ESC to ddt.open term, TAB toggle autoscroll, help for more", NULL, false, 255, 255, 255, 255);
+        gsi_text(gsi, fbs.x * 0.5f - 198.f, fbs.y * 0.5f, "ESC to open term, TAB toggle autoscroll, help for more", NULL, false, 255, 255, 255, 255);
         gsi_renderpass_submit(gsi, cb, fbs.x, fbs.y, gs_color(10, 10, 10, 255));
 
         // Render gui
         gs_gui_begin(gui, NULL);
 
+        gs_gui_layout_t l;
         if (window && gs_gui_window_begin(gui, "App", gs_gui_rect(100, 100, 200, 200))) {
+                l = *gs_gui_get_layout(gui);
                 gs_gui_layout_row(gui, 1, (int[]){-1}, 0);
                 gs_gui_text(gui, "Hello, Gunslinger.");
                 gs_gui_window_end(gui);
         }
 
+        int s = summons;
+        while (s--) {
+                gs_gui_push_id(gui, &s, sizeof(s));
+                if (gs_gui_window_begin(gui, "Summon", gs_gui_rect(100, 100, 200, 200))) {
+                        gs_gui_layout_row(gui, 1, (int[]){-1}, 0);
+                        gs_gui_text(gui, "At your Service!");
+                        gs_gui_window_end(gui);
+                }
+                gs_gui_pop_id(gui);
+        }
+
         gs_vec2 fb = gui->framebuffer_size;
-        gs_gui_rect_t screen = gs_gui_rect(0, 0, fb.x, fb.y);
+        gs_gui_rect_t screen;
+        if (embeded)
+                screen = l.body;
+        else
+                screen = gs_gui_rect(0, 0, fb.x, fb.y);
         gs_ddt(&ddt, gui, screen, NULL);
 
         gs_gui_end(gui);
